@@ -1,11 +1,14 @@
 /*
  * Double-precision vector asinh(x) function.
- * Copyright (c) 2022, Arm Limited.
+ *
+ * Copyright (c) 2022-2023, Arm Limited.
  * SPDX-License-Identifier: MIT OR Apache-2.0 WITH LLVM-exception
  */
 
 #include "v_math.h"
 #include "estrin.h"
+#include "pl_sig.h"
+#include "pl_test.h"
 
 #if V_SUPPORTED
 
@@ -82,10 +85,10 @@ log_inline (v_f64_t x)
    asinh(x) = sign(x) * log(|x| + sqrt(x^2 + 1)      if |x| >= 1
 	    = sign(x) * (|x| + |x|^3 * P(x^2))       otherwise
    where log(x) is an optimized log approximation, and P(x) is a polynomial
-   shared with the scalar routine. The greatest observed error 2.03 ULP, in
+   shared with the scalar routine. The greatest observed error 3.29 ULP, in
    |x| >= 1:
-   __v_asinh(-0x1.00094e0f39574p+0) got -0x1.c3508eb6a681ep-1
-				   want -0x1.c3508eb6a682p-1.  */
+   __v_asinh(0x1.2cd9d717e2c9bp+0) got 0x1.ffffcfd0e234fp-1
+				  want 0x1.ffffcfd0e2352p-1.  */
 VPCS_ATTR v_f64_t V_NAME (asinh) (v_f64_t x)
 {
   v_u64_t ix = v_as_u64_f64 (x);
@@ -96,19 +99,19 @@ VPCS_ATTR v_f64_t V_NAME (asinh) (v_f64_t x)
   v_u64_t gt1 = v_cond_u64 (top12 >= OneTop);
   v_u64_t special = v_cond_u64 (top12 >= HugeBound);
 
-#if WANT_ERRNO
+#if WANT_SIMD_EXCEPT
   v_u64_t tiny = v_cond_u64 (top12 < TinyBound);
   special |= tiny;
 #endif
 
   /* Option 1: |x| >= 1.
      Compute asinh(x) according by asinh(x) = log(x + sqrt(x^2 + 1)).
-     If WANT_ERRNO is enabled, sidestep special values, which will overflow, by
-     setting special lanes to 1. These will be fixed later.  */
+     If WANT_SIMD_EXCEPT is enabled, sidestep special values, which will
+     overflow, by setting special lanes to 1. These will be fixed later.  */
   v_f64_t option_1 = v_f64 (0);
   if (likely (v_any_u64 (gt1)))
     {
-#if WANT_ERRNO
+#if WANT_SIMD_EXCEPT
       v_f64_t xm = v_sel_f64 (special, v_f64 (1), ax);
 #else
       v_f64_t xm = ax;
@@ -118,16 +121,16 @@ VPCS_ATTR v_f64_t V_NAME (asinh) (v_f64_t x)
 
   /* Option 2: |x| < 1.
      Compute asinh(x) using a polynomial.
-     If WANT_ERRNO is enabled, sidestep special lanes, which will overflow, and
-     tiny lanes, which will underflow, by setting them to 0. They will be fixed
-     later, either by selecting x or falling back to the scalar special-case.
-     The largest observed error in this region is 1.47 ULPs:
+     If WANT_SIMD_EXCEPT is enabled, sidestep special lanes, which will
+     overflow, and tiny lanes, which will underflow, by setting them to 0. They
+     will be fixed later, either by selecting x or falling back to the scalar
+     special-case. The largest observed error in this region is 1.47 ULPs:
      __v_asinh(0x1.fdfcd00cc1e6ap-1) got 0x1.c1d6bf874019bp-1
 				    want 0x1.c1d6bf874019cp-1.  */
   v_f64_t option_2 = v_f64 (0);
   if (likely (v_any_u64 (~gt1)))
     {
-#if WANT_ERRNO
+#if WANT_SIMD_EXCEPT
       ax = v_sel_f64 (tiny | gt1, v_f64 (0), ax);
 #endif
       v_f64_t x2 = ax * ax;
@@ -136,7 +139,7 @@ VPCS_ATTR v_f64_t V_NAME (asinh) (v_f64_t x)
       v_f64_t z8 = z4 * z4;
       v_f64_t p = ESTRIN_17 (x2, z2, z4, z8, z8 * z8, C);
       option_2 = v_fma_f64 (p, x2 * ax, ax);
-#if WANT_ERRNO
+#if WANT_SIMD_EXCEPT
       option_2 = v_sel_f64 (tiny, x, option_2);
 #endif
     }
@@ -152,4 +155,21 @@ VPCS_ATTR v_f64_t V_NAME (asinh) (v_f64_t x)
 }
 VPCS_ALIAS
 
+PL_SIG (V, D, 1, asinh, -10.0, 10.0)
+PL_TEST_ULP (V_NAME (asinh), 2.80)
+PL_TEST_EXPECT_FENV (V_NAME (asinh), WANT_SIMD_EXCEPT)
+/* Test vector asinh 3 times, with control lane < 1, > 1 and special.
+   Ensures the v_sel is choosing the right option in all cases.  */
+#define V_ASINH_INTERVAL(lo, hi, n)                                            \
+  PL_TEST_INTERVAL_C (V_NAME (asinh), lo, hi, n, 0.5)                          \
+  PL_TEST_INTERVAL_C (V_NAME (asinh), lo, hi, n, 2)                            \
+  PL_TEST_INTERVAL_C (V_NAME (asinh), lo, hi, n, 0x1p600)
+V_ASINH_INTERVAL (0, 0x1p-26, 50000)
+V_ASINH_INTERVAL (0x1p-26, 1, 50000)
+V_ASINH_INTERVAL (1, 0x1p511, 50000)
+V_ASINH_INTERVAL (0x1p511, inf, 40000)
+V_ASINH_INTERVAL (-0, -0x1p-26, 50000)
+V_ASINH_INTERVAL (-0x1p-26, -1, 50000)
+V_ASINH_INTERVAL (-1, -0x1p511, 50000)
+V_ASINH_INTERVAL (-0x1p511, -inf, 40000)
 #endif

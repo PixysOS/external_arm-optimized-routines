@@ -1,15 +1,14 @@
 /*
  * Double-precision erfc(x) function.
  *
- * Copyright (c) 2019-2022, Arm Limited.
+ * Copyright (c) 2019-2023, Arm Limited.
  * SPDX-License-Identifier: MIT OR Apache-2.0 WITH LLVM-exception
  */
 
-#include <stdint.h>
-#include <math.h>
-#include <errno.h>
 #include "math_config.h"
 #include "pairwise_horner.h"
+#include "pl_sig.h"
+#include "pl_test.h"
 
 #define AbsMask (0x7fffffffffffffff)
 
@@ -145,3 +144,12 @@ erfc (double x)
       return __math_uflow (0);
     }
 }
+
+PL_SIG (S, D, 1, erfc, -6.0, 28.0)
+PL_TEST_ULP (erfc, 3.56)
+PL_TEST_INTERVAL (erfc, 0, 0xffff0000, 10000)
+PL_TEST_INTERVAL (erfc, 0x1p-1022, 0x1p-26, 40000)
+PL_TEST_INTERVAL (erfc, -0x1p-1022, -0x1p-26, 40000)
+PL_TEST_INTERVAL (erfc, 0x1p-26, 0x1p5, 40000)
+PL_TEST_INTERVAL (erfc, -0x1p-26, -0x1p3, 40000)
+PL_TEST_INTERVAL (erfc, 0, inf, 40000)

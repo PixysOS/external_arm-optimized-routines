@@ -1,10 +1,12 @@
 /*
  * Single-precision tanh(x) function.
  *
- * Copyright (c) 2022, Arm Limited.
+ * Copyright (c) 2022-2023, Arm Limited.
  * SPDX-License-Identifier: MIT OR Apache-2.0 WITH LLVM-exception
  */
 #include "math_config.h"
+#include "pl_sig.h"
+#include "pl_test.h"
 
 #define BoringBound                                                            \
   0x41102cb3 /* 0x1.205966p+3, above which tanhf rounds to 1 (or -1 for        \
@@ -78,3 +80,12 @@ tanhf (float x)
   float q = expm1f_inline (2 * x);
   return q / (q + 2);
 }
+
+PL_SIG (S, F, 1, tanh, -10.0, 10.0)
+PL_TEST_ULP (tanhf, 2.09)
+PL_TEST_INTERVAL (tanhf, 0, 0x1p-23, 1000)
+PL_TEST_INTERVAL (tanhf, -0, -0x1p-23, 1000)
+PL_TEST_INTERVAL (tanhf, 0x1p-23, 0x1.205966p+3, 100000)
+PL_TEST_INTERVAL (tanhf, -0x1p-23, -0x1.205966p+3, 100000)
+PL_TEST_INTERVAL (tanhf, 0x1.205966p+3, inf, 100)
+PL_TEST_INTERVAL (tanhf, -0x1.205966p+3, -inf, 100)

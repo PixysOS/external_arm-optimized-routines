@@ -1,11 +1,14 @@
 /*
  * Single-precision log(1+x) function.
- * Copyright (c) 2022, Arm Limited.
+ *
+ * Copyright (c) 2022-2023, Arm Limited.
  * SPDX-License-Identifier: MIT OR Apache-2.0 WITH LLVM-exception
  */
 
-#include "math_config.h"
 #include "hornerf.h"
+#include "math_config.h"
+#include "pl_sig.h"
+#include "pl_test.h"
 
 #define Ln2 (0x1.62e43p-1f)
 #define SignMask (0x80000000)
@@ -149,3 +152,14 @@ log1pf (float x)
   /* Apply the scaling back.  */
   return fmaf (scale_back, Ln2, p);
 }
+
+PL_SIG (S, F, 1, log1p, -0.9, 10.0)
+PL_TEST_ULP (log1pf, 1.52)
+PL_TEST_INTERVAL (log1pf, -10.0, 10.0, 10000)
+PL_TEST_INTERVAL (log1pf, 0.0, 0x1p-23, 50000)
+PL_TEST_INTERVAL (log1pf, 0x1p-23, 0.001, 50000)
+PL_TEST_INTERVAL (log1pf, 0.001, 1.0, 50000)
+PL_TEST_INTERVAL (log1pf, 0.0, -0x1p-23, 50000)
+PL_TEST_INTERVAL (log1pf, -0x1p-23, -0.001, 50000)
+PL_TEST_INTERVAL (log1pf, -0.001, -1.0, 50000)
+PL_TEST_INTERVAL (log1pf, -1.0, inf, 5000)

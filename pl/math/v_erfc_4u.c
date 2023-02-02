@@ -1,13 +1,16 @@
 /*
  * Double-precision vector erfc(x) function.
  *
- * Copyright (c) 2019-2022, Arm Limited.
+ * Copyright (c) 2019-2023, Arm Limited.
  * SPDX-License-Identifier: MIT OR Apache-2.0 WITH LLVM-exception
  */
 
-#include "math_config.h"
 #include "v_math.h"
 #include "horner.h"
+#include "math_config.h"
+#include "pl_sig.h"
+#include "pl_test.h"
+
 #if V_SUPPORTED
 
 /* Accurate exponential (vector variant of exp_dd).  */
@@ -153,4 +156,13 @@ v_f64_t V_NAME (erfc) (v_f64_t x)
   return y;
 }
 VPCS_ALIAS
+
+PL_SIG (V, D, 1, erfc, -6.0, 28.0)
+PL_TEST_ULP (V_NAME (erfc), 3.15)
+PL_TEST_INTERVAL (V_NAME (erfc), 0, 0xffff0000, 10000)
+PL_TEST_INTERVAL (V_NAME (erfc), 0x1p-1022, 0x1p-26, 40000)
+PL_TEST_INTERVAL (V_NAME (erfc), -0x1p-1022, -0x1p-26, 40000)
+PL_TEST_INTERVAL (V_NAME (erfc), 0x1p-26, 0x1p5, 40000)
+PL_TEST_INTERVAL (V_NAME (erfc), -0x1p-26, -0x1p3, 40000)
+PL_TEST_INTERVAL (V_NAME (erfc), 0, inf, 40000)
 #endif

@@ -1,12 +1,14 @@
 /*
  * Double-precision e^x - 1 function.
  *
- * Copyright (c) 2022, Arm Limited.
+ * Copyright (c) 2022-2023, Arm Limited.
  * SPDX-License-Identifier: MIT OR Apache-2.0 WITH LLVM-exception
  */
 
-#include "math_config.h"
 #include "estrin.h"
+#include "math_config.h"
+#include "pl_sig.h"
+#include "pl_test.h"
 
 #define InvLn2 0x1.71547652b82fep0
 #define Ln2hi 0x1.62e42fefa39efp-1
@@ -73,3 +75,12 @@ expm1 (double x)
   /* expm1(x) ~= 2 * (p * t + (t - 1/2)).  */
   return 2 * fma (p, t, t - 0.5);
 }
+
+PL_SIG (S, D, 1, expm1, -9.9, 9.9)
+PL_TEST_ULP (expm1, 1.68)
+PL_TEST_INTERVAL (expm1, 0, 0x1p-51, 1000)
+PL_TEST_INTERVAL (expm1, -0, -0x1p-51, 1000)
+PL_TEST_INTERVAL (expm1, 0x1p-51, 0x1.63108c75a1937p+9, 100000)
+PL_TEST_INTERVAL (expm1, -0x1p-51, -0x1.740bf7c0d927dp+9, 100000)
+PL_TEST_INTERVAL (expm1, 0x1.63108c75a1937p+9, inf, 100)
+PL_TEST_INTERVAL (expm1, -0x1.740bf7c0d927dp+9, -inf, 100)

@@ -1,11 +1,14 @@
 /*
  * Double-precision vector atan(x) function.
  *
- * Copyright (c) 2021-2022, Arm Limited.
+ * Copyright (c) 2021-2023, Arm Limited.
  * SPDX-License-Identifier: MIT OR Apache-2.0 WITH LLVM-exception
  */
 
 #include "sv_math.h"
+#include "pl_sig.h"
+#include "pl_test.h"
+
 #if SV_SUPPORTED
 
 #include "sv_atan_common.h"
@@ -47,6 +50,13 @@ __sv_atan_x (sv_f64_t x, const svbool_t pg)
   return y;
 }
 
-strong_alias (__sv_atan_x, _ZGVsMxv_atan)
+PL_ALIAS (__sv_atan_x, _ZGVsMxv_atan)
 
+PL_SIG (SV, D, 1, atan, -3.1, 3.1)
+PL_TEST_ULP (__sv_atan, 1.78)
+PL_TEST_INTERVAL (__sv_atan, -10.0, 10.0, 50000)
+PL_TEST_INTERVAL (__sv_atan, -1.0, 1.0, 40000)
+PL_TEST_INTERVAL (__sv_atan, 0.0, 1.0, 40000)
+PL_TEST_INTERVAL (__sv_atan, 1.0, 100.0, 40000)
+PL_TEST_INTERVAL (__sv_atan, 1e6, 1e32, 40000)
 #endif
